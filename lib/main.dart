@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_sound/flutter_sound.dart';
 
@@ -34,12 +36,47 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: AppBar(
-          title: Text(widget.title),
-        ),
         body: Center(
-          child: PlaybackButton(),
-        ));
+      child: SafeArea(child: DashCastApp()),
+    ));
+  }
+}
+
+class DashCastApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: <Widget>[
+        Flexible(
+          flex: 9,
+          child: Placeholder(),
+        ),
+        Flexible(flex: 2, child: PlaybackButtons()),
+      ],
+    );
+  }
+}
+
+class AudioControls extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        PlaybackButton(),
+      ],
+    );
+  }
+}
+
+class PlaybackButtons extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        PlaybackButton(),
+      ],
+    );
   }
 }
 
@@ -50,29 +87,80 @@ class PlaybackButton extends StatefulWidget {
 
 class _PlaybackButtonState extends State<PlaybackButton> {
   bool _isPlaying = false;
+  FlutterSound _sound;
+  final url =
+      'https://incompetech.com/music/royalty-free/mp3-royaltyfree/Surf%20Shimmy.mp3';
+  double _playPosition;
+  Stream<PlayStatus> _playerSubscription;
 
-  void _stop() {}
-
-  void _play() async {
-    FlutterSound flutterSound = FlutterSound();
-    String path = await flutterSound.startPlayer('assets/surf_shimmy.mp3');
-    print('startPlayer: $path');
-    flutterSound.
+  @override
+  void initState() {
+    super.initState();
+    FlutterSound _sound = FlutterSound();
+    _playPosition = 0;
   }
+
+  void _stop() async {
+    await _sound.stopPlayer();
+    setState(() {
+      _isPlaying = false;
+    });
+  }
+
+  // void _play() async {
+  //   String path = await _sound.startPlayer(url);
+  //   _playerSubscription = _sound.onPlayerStateChanged
+  //     ..listen((e) {
+  //       if (e != null) {
+  //         print(e.currentPosition);
+  //         setState(() {
+  //           _playPosition = e.currentPosition / e.duration;
+  //         });
+  //       }
+  //     });
+  //   setState(() {this._isPlaying = true;
+  //   });
+  // }
+  void _play() async {
+    await _sound.startPlayer(url);
+    _playerSubscription = _sound.onPlayerStateChanged
+      ..listen((e) {
+        if (e != null) {
+          print(e.currentPosition);
+          setState(() => _playPosition = (e.currentPosition / e.duration));
+        }
+      });
+    setState(() => _isPlaying = true);
+  }
+
+  void _fastForward() {}
+
+  void _rewind() {}
 
   @override
   Widget build(BuildContext context) {
-    return IconButton(
-        onPressed: () {
-          if (_isPlaying) {
-            _stop();
-          } else {
-            _play();
-          }
-          setState(() {
-            _isPlaying = !_isPlaying;
-          });
-        },
-        icon: _isPlaying ? Icon(Icons.stop) : Icon(Icons.play_arrow));
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Slider(value: _playPosition),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            IconButton(onPressed: null, icon: Icon(Icons.fast_rewind)),
+            IconButton(
+                onPressed: () {
+                  if (_isPlaying) {
+                    _stop();
+                  } else {
+                    _play();
+                  }
+
+                },
+                icon: _isPlaying ? Icon(Icons.stop) : Icon(Icons.play_arrow)),
+            IconButton(onPressed: null, icon: Icon(Icons.fast_forward)),
+          ],
+        ),
+      ],
+    );
   }
 }
