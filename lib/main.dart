@@ -76,7 +76,7 @@ class EpisodeListView extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
           ),
           onTap: () {
-            Provider.of<Podcast>(context).selectedItem = i;
+            Provider.of<Podcast>(context, listen: false).selectedItem = i;
             Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => PlayerPage()),
             );
@@ -94,7 +94,7 @@ class PlayerPage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          Provider.of<Podcast>(context).selectedItem.title,
+          Provider.of<Podcast>(context, listen: false).selectedItem.title,
         ),
       ),
       body: SafeArea(child: Player()),
@@ -105,7 +105,7 @@ class PlayerPage extends StatelessWidget {
 class Player extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final podcast = Provider.of<Podcast>(context);
+    final podcast = Provider.of<Podcast>(context, listen: false);
     return Column(
       children: [
         Flexible(
@@ -185,7 +185,7 @@ class _PlaybackButtonState extends State<PlaybackButtons> {
 
   @override
   Widget build(BuildContext context) {
-    final item = Provider.of<Podcast>(context).selectedItem;
+    final item = Provider.of<Podcast>(context, listen: false).selectedItem;
 
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
