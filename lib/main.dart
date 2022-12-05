@@ -1,14 +1,28 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_sound/flutter_sound.dart';
 import 'package:webfeed/webfeed.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as path;
+
 
 final url = 'https://itsallwidgets.com/podcast/feed';
+
+final pathSuffix = '/dashcast/downloads';
+
+Future<String> _getDownloadPath(String filename) async {
+  final dir = await getApplicationDocumentsDirectory();
+  final prefix = dir.uri.path;
+  return path.join(prefix, pathSuffix, filename);
+}
 
 class Podcast with ChangeNotifier {
   RssFeed _feed;
   RssItem _selectedItem;
+  Map<String, bool> downloadStatus;
 
   RssFeed get feed => _feed;
   void parse(String url) async {
@@ -22,6 +36,24 @@ class Podcast with ChangeNotifier {
   set selectedItem(RssItem value) {
     _selectedItem = value;
     notifyListeners();
+  }
+
+  void download(RssItem item) async {
+    http.StreamedRequest req =
+        http.StreamedRequest('GET', Uri.parse(item.guid));
+    final res = await req.send();
+    if (res.statusCode != 200) {
+      throw Exception('Unexpected HTTP code: ${res.statusCode}');
+    }
+
+    res.stream.listen((bytes) {
+      
+    });
+
+    // final file = File(await _getDownloadPath(path.split(item.guid).last));
+    // res.stream.pipe(file.openWrite()).whenComplete(() {
+    //   print('Downloading complete');
+    // });
   }
 }
 
@@ -48,8 +80,8 @@ class EpisodesPage extends StatelessWidget {
         return podcast.feed != null
             ? EpisodeListView(rssFeed: podcast.feed)
             : Center(
-          child: CircularProgressIndicator(),
-        );
+                child: CircularProgressIndicator(),
+              );
       }),
     );
   }
@@ -69,20 +101,28 @@ class EpisodeListView extends StatelessWidget {
       children: rssFeed.items
           .map(
             (i) => ListTile(
-          title: Text(i.title),
-          subtitle: Text(
-            i.description,
-            maxLines: 3,
-            overflow: TextOverflow.ellipsis,
-          ),
-          onTap: () {
-            Provider.of<Podcast>(context, listen: false).selectedItem = i;
-            Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => PlayerPage()),
-            );
-          },
-        ),
-      )
+              title: Text(i.title),
+              subtitle: Text(
+                i.description,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+              ),
+              trailing: IconButton(
+                icon: Icon(Icons.arrow_downward),
+                onPressed: () {
+                  Provider.of<Podcast>(context, listen: false).download(i);
+                  Scaffold.of(context)
+                      .showSnackBar(SnackBar(content: Text('Downloading! ${i.title} ')));
+                },
+              ),
+              onTap: () {
+                Provider.of<Podcast>(context, listen: false).selectedItem = i;
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => PlayerPage()),
+                );
+              },
+            ),
+          )
           .toList(),
     );
   }
